@@ -28,6 +28,8 @@
   <properties>
     <java.version>21</java.version>
     <sqlite-jdbc.version>3.50.3.0</sqlite-jdbc.version>
+    <!-- 1.21.4+ works with the Docker Engine on current CI runners -->
+    <testcontainers.version>1.21.4</testcontainers.version>
   </properties>
 
   <dependencies>
