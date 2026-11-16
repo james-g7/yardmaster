@@ -76,6 +76,20 @@ Each step ends with a check that must pass before moving on.
 - [ ] **11. Packaging:** final Compose file, Helm chart, setup docs. *Done when* a fresh machine runs Yardmaster with one command.
 - [ ] **12. First real test:** an agent playground with free-tier keys and a local model. *Success:* every agent is served and no key breaks its rules.
 
+## Branches and pull requests
+
+Work happens on milestone branches named after the build step, such as
+`m2-basic-proxy`, which merge into `main` when the step's check passes.
+
+`main` and every milestone branch (`m[0-9]*`) are protected:
+
+- Changes arrive only through pull requests; no direct pushes, force pushes
+  or deletion, and no admin bypass.
+- CI must pass: `build`, `proto` and `image`.
+- The Claude review must approve. It runs on every pull request and either
+  approves or requests changes. New commits dismiss an earlier approval, so
+  each push is reviewed again.
+
 ## Design docs
 
 - [Build spec](https://claude.ai/artifact/GeJAQciH8bNXchwL5ikjHs)
