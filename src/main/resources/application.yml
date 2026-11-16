@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: yardmaster
+  # SQLite by default. For several replicas, set SPRING_PROFILES_ACTIVE=postgres.
+  datasource:
+    url: jdbc:sqlite:${YARDMASTER_DATA_DIR:./data}/yardmaster.db?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
+    hikari:
+      # SQLite allows one writer at a time.
+      maximum-pool-size: 1
+  flyway:
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${VALKEY_HOST:localhost}
+      port: ${VALKEY_PORT:6379}
+      password: ${VALKEY_PASSWORD:}
+      timeout: 2s
+  threads:
+    virtual:
+      enabled: true
+
+# Public API port: caller endpoints and /healthz, /readyz.
+server:
+  port: ${YARDMASTER_PUBLIC_PORT:8080}
+  shutdown: graceful
+
+# Private admin port: metrics now; admin panel and API in build step 9. Never expose publicly.
+management:
+  server:
+    port: ${YARDMASTER_ADMIN_PORT:9090}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO

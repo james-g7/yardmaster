@@ -1,0 +1,8 @@
+# Switched on with SPRING_PROFILES_ACTIVE=postgres, for running several replicas.
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:yardmaster}
+    username: ${POSTGRES_USER:yardmaster}
+    password: ${POSTGRES_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10

@@ -1,0 +1,49 @@
+// Credits service contract. Yardmaster is the client; the Credits Service
+// (built separately) is the server. Authorise places a hold for the
+// worst-case cost and may lower the output limit, Record settles the real
+// cost, Release frees a hold when a call is refused or fails before sending.
+syntax = "proto3";
+
+package yardmaster.credits.v1;
+
+option java_multiple_files = true;
+option java_package = "yardmaster.credits.v1";
+
+service Credits {
+  rpc Authorise(AuthoriseRequest) returns (AuthoriseResponse);
+  rpc Record(RecordRequest) returns (RecordResponse);
+  rpc Release(ReleaseRequest) returns (ReleaseResponse);
+}
+
+message AuthoriseRequest {
+  string idempotency_key = 1;
+  string caller_id = 2;
+  string label = 3;
+  int64 input_tokens_estimate = 4;
+  int64 max_output_tokens = 5;
+  repeated string tags = 6;
+}
+
+message AuthoriseResponse {
+  bool allowed = 1;
+  string hold_id = 2;
+  int64 max_output_tokens = 3;
+  string reason = 4;
+}
+
+message RecordRequest {
+  string idempotency_key = 1;
+  string hold_id = 2;
+  string model = 3;
+  int64 input_tokens = 4;
+  int64 output_tokens = 5;
+  int64 cached_input_tokens = 6;
+}
+
+message RecordResponse {}
+
+message ReleaseRequest {
+  string hold_id = 1;
+}
+
+message ReleaseResponse {}

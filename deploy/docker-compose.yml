@@ -1,0 +1,39 @@
+# Single instance: Yardmaster with SQLite on a volume, plus Valkey.
+# Only the public API port is published. The admin port (9090) stays inside
+# the Compose network; reach it with `docker compose exec` or an SSH tunnel.
+#
+#   docker compose -f deploy/docker-compose.yml up --build
+#   curl localhost:8080/readyz
+#
+# The stand-in credits service joins this file in build step 8.
+services:
+  yardmaster:
+    build: ..
+    image: yardmaster:dev
+    environment:
+      VALKEY_HOST: valkey
+      YARDMASTER_DATA_DIR: /data
+    ports:
+      - "8080:8080"
+    volumes:
+      - yardmaster-data:/data
+    depends_on:
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  yardmaster-data:
+  valkey-data:
