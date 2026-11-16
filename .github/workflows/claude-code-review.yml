@@ -1,33 +1,31 @@
 name: Claude Code Review
 
+# Claude reviews every pull request and then approves it or requests changes.
+# main and milestone branches (m[0-9]*) require this approval to merge.
+# The approval is posted by github-actions[bot], which needs
+# Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
+
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -36,10 +34,40 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          prompt: |
+            Review pull request ${{ github.repository }}#${{ github.event.pull_request.number }}.
 
+            Use `gh pr view` and `gh pr diff` to read it. Judge it against AGENTS.md
+            (the project rules) and the README build steps. Look for bugs, security
+            problems (provider keys logged or returned, prompt or reply content stored,
+            admin port exposed), migrations that would not run on both SQLite and
+            PostgreSQL, missing tests, and features beyond the spec.
+
+            Post an inline comment for each real problem, citing the line. Don't
+            comment on style nitpicks or things that are fine.
+
+            Finally, write your verdict to the file `claude-verdict.txt` in the
+            working directory. The first line must be exactly APPROVE or
+            REQUEST_CHANGES. Use REQUEST_CHANGES only for problems that must be fixed
+            before merging. The following lines are a short summary for the PR.
+          claude_args: >-
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,Write,Bash(gh pr view:*),Bash(gh pr diff:*)"
+
+      - name: Submit review verdict
+        if: always() && steps.claude-review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ ! -f claude-verdict.txt ]; then
+            echo "Claude did not write a verdict; leaving the PR unapproved."
+            exit 1
+          fi
+          verdict=$(head -n1 claude-verdict.txt | tr -d '[:space:]')
+          tail -n +2 claude-verdict.txt > body.txt
+          [ -s body.txt ] || echo "Reviewed by Claude." > body.txt
+          case "$verdict" in
+            APPROVE)         gh pr review "$PR" --approve --body-file body.txt ;;
+            REQUEST_CHANGES) gh pr review "$PR" --request-changes --body-file body.txt ;;
+            *) echo "Unrecognised verdict: $verdict"; exit 1 ;;
+          esac

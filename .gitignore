@@ -10,3 +10,4 @@ data/
 .env
 *.pem
 *.key
+claude-verdict.txt
