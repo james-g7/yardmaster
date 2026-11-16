@@ -37,6 +37,14 @@ management:
       probes:
         enabled: true
 
+# Upstream AI providers. Override with e.g. YARDMASTER_PROVIDERS_OPENAI_BASE_URL.
+yardmaster:
+  providers:
+    openai:
+      base-url: https://api.openai.com/v1
+      connect-timeout: 5s
+      read-timeout: 60s
+
 logging:
   level:
     root: INFO
