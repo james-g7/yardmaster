@@ -7,8 +7,8 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -35,16 +35,16 @@ class SqliteStartupIT {
         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + dataDir.resolve("test.db"));
     }
 
-    @Autowired
-    TestRestTemplate http;
+    @Value("${local.server.port}")
+    int port;
 
     @Autowired
     JdbcTemplate jdbc;
 
     @Test
-    void startsMigratesAndIsReady() {
-        assertThat(http.getForObject("/healthz", String.class)).isEqualTo("ok");
-        assertThat(http.getForEntity("/readyz", String.class).getStatusCode().value()).isEqualTo(200);
+    void startsMigratesAndIsReady() throws Exception {
+        assertThat(HttpChecks.get(port, "/healthz").body()).isEqualTo("ok");
+        assertThat(HttpChecks.get(port, "/readyz").statusCode()).isEqualTo(200);
         Integer tables = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'usage_records'", Integer.class);
         assertThat(tables).isEqualTo(1);
