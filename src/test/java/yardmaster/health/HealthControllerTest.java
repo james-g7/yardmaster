@@ -45,6 +45,37 @@ class HealthControllerTest {
   }
 
   @Test
+  void notReadyWhenDatabaseAnswersSomethingElse() {
+    when(jdbc.queryForObject("SELECT 1", Integer.class)).thenReturn(0);
+
+    var response = controller.readyz();
+    assertThat(response.getStatusCode().value()).isEqualTo(503);
+    assertThat(response.getBody()).contains("database");
+  }
+
+  @Test
+  void notReadyWhenValkeyHasNoConnectionFactory() {
+    databaseUp();
+    when(valkey.getConnectionFactory()).thenReturn(null);
+
+    var response = controller.readyz();
+    assertThat(response.getStatusCode().value()).isEqualTo(503);
+    assertThat(response.getBody()).contains("valkey");
+  }
+
+  @Test
+  void notReadyWhenValkeyPingIsNotPong() {
+    databaseUp();
+    when(valkey.getConnectionFactory()).thenReturn(factory);
+    when(factory.getConnection()).thenReturn(connection);
+    when(connection.ping()).thenReturn(null);
+
+    var response = controller.readyz();
+    assertThat(response.getStatusCode().value()).isEqualTo(503);
+    assertThat(response.getBody()).contains("valkey");
+  }
+
+  @Test
   void notReadyWhenValkeyDown() {
     databaseUp();
     when(valkey.getConnectionFactory()).thenReturn(factory);
