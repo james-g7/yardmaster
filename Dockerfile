@@ -4,7 +4,8 @@ WORKDIR /src
 COPY pom.xml .
 RUN mvn -B -q dependency:go-offline
 COPY src ./src
-RUN mvn -B -q -DskipTests package
+# Tests and style checks run in CI, not in the image build
+RUN mvn -B -q -DskipTests -Dcheckstyle.skip package
 
 # Run
 FROM eclipse-temurin:21-jre
