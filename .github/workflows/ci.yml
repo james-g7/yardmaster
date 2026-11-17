@@ -21,7 +21,8 @@ jobs:
       # Unit tests, then Testcontainers integration tests (SQLite + PostgreSQL, Valkey)
       - run: mvn -B verify
 
-  # Mutation testing (PIT) — only on pull requests into main, i.e. milestone merges
+  # Mutation testing (PIT) — only on pull requests into main, i.e. milestone merges.
+  # Fails unless every mutant is killed (mutationThreshold in the pitest profile).
   mutation:
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest

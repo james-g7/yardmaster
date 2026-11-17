@@ -245,6 +245,8 @@
                 <jvmArg>-Xshare:off</jvmArg>
                 <jvmArg>--enable-native-access=ALL-UNNAMED</jvmArg>
               </jvmArgs>
+              <!-- Every mutant must be killed -->
+              <mutationThreshold>100</mutationThreshold>
               <threads>4</threads>
               <timestampedReports>false</timestampedReports>
               <outputFormats>
