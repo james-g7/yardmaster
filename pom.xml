@@ -27,6 +27,7 @@
 
   <properties>
     <java.version>21</java.version>
+    <checkstyle.version>10.26.1</checkstyle.version>
     <sqlite-jdbc.version>3.54.1.0</sqlite-jdbc.version>
   </properties>
 
@@ -142,6 +143,37 @@
         <configuration>
           <argLine>-javaagent:${org.mockito:mockito-core:jar} -Xshare:off --enable-native-access=ALL-UNNAMED</argLine>
         </configuration>
+      </plugin>
+      <plugin>
+        <!-- Google Java Style, checked before anything compiles -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <configLocation>google_checks.xml</configLocation>
+          <suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>
+          <consoleOutput>true</consoleOutput>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+          <!-- google_checks.xml reports at warning level; fail the build on those too -->
+          <violationSeverity>warning</violationSeverity>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${checkstyle.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>google-style</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <!-- *IT classes (Testcontainers) run in the integration-test phase -->

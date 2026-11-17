@@ -1,0 +1,26 @@
+name: Block label
+
+# Fails while a pull request carries a blocking label, so it can't be merged.
+# Make "Block label / check" a required status check on main for this to bite.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail on blocking labels
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BLOCKING: '["blocked", "do not merge", "do-not-merge", "wip"]'
+        run: |
+          found=$(jq -rn --argjson l "$LABELS" --argjson b "$BLOCKING" \
+            '[$l[] | select(ascii_downcase as $x | $b | index($x))] | join(", ")')
+          if [ -n "$found" ]; then
+            echo "::error::Remove the blocking label(s) before merging: $found"
+            exit 1
+          fi
+          echo "No blocking labels."
