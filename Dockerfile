@@ -8,7 +8,7 @@ COPY src ./src
 RUN mvn -B -q -DskipTests -Dcheckstyle.skip package
 
 # Run
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:24-jre
 RUN useradd --system --uid 10001 yardmaster \
  && mkdir -p /data && chown yardmaster /data
 WORKDIR /app
