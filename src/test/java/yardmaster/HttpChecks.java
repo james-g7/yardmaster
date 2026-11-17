@@ -9,13 +9,13 @@ import java.net.http.HttpResponse;
 /** Small helper for calling the running gateway in integration tests. */
 final class HttpChecks {
 
-    private static final HttpClient CLIENT = HttpClient.newHttpClient();
+  private static final HttpClient CLIENT = HttpClient.newHttpClient();
 
-    private HttpChecks() {
-    }
+  private HttpChecks() {}
 
-    static HttpResponse<String> get(int port, String path) throws IOException, InterruptedException {
-        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).GET().build();
-        return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-    }
+  static HttpResponse<String> get(int port, String path) throws IOException, InterruptedException {
+    var request =
+        HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).GET().build();
+    return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+  }
 }
