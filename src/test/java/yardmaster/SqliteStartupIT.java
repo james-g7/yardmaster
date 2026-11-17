@@ -3,7 +3,6 @@ package yardmaster;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,36 +18,38 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /** Default setup: SQLite file plus a real Valkey. */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "management.server.port=0")
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = "management.server.port=0")
 @Testcontainers
 @DirtiesContext // close the app so Windows can delete the SQLite temp file
 class SqliteStartupIT {
 
-    @TempDir
-    static Path dataDir;
+  @TempDir static Path dataDir;
 
-    @Container
-    @ServiceConnection(name = "redis")
-    static GenericContainer<?> valkey = new GenericContainer<>("valkey/valkey:8-alpine").withExposedPorts(6379);
+  @Container
+  @ServiceConnection(name = "redis")
+  static GenericContainer<?> valkey =
+      new GenericContainer<>("valkey/valkey:8-alpine").withExposedPorts(6379);
 
-    @DynamicPropertySource
-    static void sqlite(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + dataDir.resolve("test.db"));
-    }
+  @DynamicPropertySource
+  static void sqlite(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + dataDir.resolve("test.db"));
+  }
 
-    @Value("${local.server.port}")
-    int port;
+  @Value("${local.server.port}")
+  int port;
 
-    @Autowired
-    JdbcTemplate jdbc;
+  @Autowired JdbcTemplate jdbc;
 
-    @Test
-    void startsMigratesAndIsReady() throws Exception {
-        assertThat(HttpChecks.get(port, "/healthz").body()).isEqualTo("ok");
-        assertThat(HttpChecks.get(port, "/readyz").statusCode()).isEqualTo(200);
-        Integer tables = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'usage_records'", Integer.class);
-        assertThat(tables).isEqualTo(1);
-    }
+  @Test
+  void startsMigratesAndIsReady() throws Exception {
+    assertThat(HttpChecks.get(port, "/healthz").body()).isEqualTo("ok");
+    assertThat(HttpChecks.get(port, "/readyz").statusCode()).isEqualTo(200);
+    Integer tables =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'usage_records'",
+            Integer.class);
+    assertThat(tables).isEqualTo(1);
+  }
 }
