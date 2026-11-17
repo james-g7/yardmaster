@@ -13,49 +13,80 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 class HealthControllerTest {
 
-    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
-    private final StringRedisTemplate valkey = mock(StringRedisTemplate.class);
-    private final RedisConnectionFactory factory = mock(RedisConnectionFactory.class);
-    private final RedisConnection connection = mock(RedisConnection.class);
-    private final HealthController controller = new HealthController(jdbc, valkey);
+  private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+  private final StringRedisTemplate valkey = mock(StringRedisTemplate.class);
+  private final RedisConnectionFactory factory = mock(RedisConnectionFactory.class);
+  private final RedisConnection connection = mock(RedisConnection.class);
+  private final HealthController controller = new HealthController(jdbc, valkey);
 
-    @Test
-    void healthzIsAlwaysOk() {
-        assertThat(controller.healthz()).isEqualTo("ok");
-    }
+  @Test
+  void healthzIsAlwaysOk() {
+    assertThat(controller.healthz()).isEqualTo("ok");
+  }
 
-    @Test
-    void readyWhenDatabaseAndValkeyAnswer() {
-        databaseUp();
-        when(valkey.getConnectionFactory()).thenReturn(factory);
-        when(factory.getConnection()).thenReturn(connection);
-        when(connection.ping()).thenReturn("PONG");
+  @Test
+  void readyWhenDatabaseAndValkeyAnswer() {
+    databaseUp();
+    when(valkey.getConnectionFactory()).thenReturn(factory);
+    when(factory.getConnection()).thenReturn(connection);
+    when(connection.ping()).thenReturn("PONG");
 
-        assertThat(controller.readyz().getStatusCode().value()).isEqualTo(200);
-    }
+    assertThat(controller.readyz().getStatusCode().value()).isEqualTo(200);
+  }
 
-    @Test
-    void notReadyWhenDatabaseDown() {
-        when(jdbc.queryForObject("SELECT 1", Integer.class))
-                .thenThrow(new DataAccessResourceFailureException("down"));
+  @Test
+  void notReadyWhenDatabaseDown() {
+    when(jdbc.queryForObject("SELECT 1", Integer.class))
+        .thenThrow(new DataAccessResourceFailureException("down"));
 
-        var response = controller.readyz();
-        assertThat(response.getStatusCode().value()).isEqualTo(503);
-        assertThat(response.getBody()).contains("database");
-    }
+    var response = controller.readyz();
+    assertThat(response.getStatusCode().value()).isEqualTo(503);
+    assertThat(response.getBody()).contains("database");
+  }
 
-    @Test
-    void notReadyWhenValkeyDown() {
-        databaseUp();
-        when(valkey.getConnectionFactory()).thenReturn(factory);
-        when(factory.getConnection()).thenThrow(new DataAccessResourceFailureException("down"));
+  @Test
+  void notReadyWhenDatabaseAnswersSomethingElse() {
+    when(jdbc.queryForObject("SELECT 1", Integer.class)).thenReturn(0);
 
-        var response = controller.readyz();
-        assertThat(response.getStatusCode().value()).isEqualTo(503);
-        assertThat(response.getBody()).contains("valkey");
-    }
+    var response = controller.readyz();
+    assertThat(response.getStatusCode().value()).isEqualTo(503);
+    assertThat(response.getBody()).contains("database");
+  }
 
-    private void databaseUp() {
-        when(jdbc.queryForObject("SELECT 1", Integer.class)).thenReturn(1);
-    }
+  @Test
+  void notReadyWhenValkeyHasNoConnectionFactory() {
+    databaseUp();
+    when(valkey.getConnectionFactory()).thenReturn(null);
+
+    var response = controller.readyz();
+    assertThat(response.getStatusCode().value()).isEqualTo(503);
+    assertThat(response.getBody()).contains("valkey");
+  }
+
+  @Test
+  void notReadyWhenValkeyPingIsNotPong() {
+    databaseUp();
+    when(valkey.getConnectionFactory()).thenReturn(factory);
+    when(factory.getConnection()).thenReturn(connection);
+    when(connection.ping()).thenReturn(null);
+
+    var response = controller.readyz();
+    assertThat(response.getStatusCode().value()).isEqualTo(503);
+    assertThat(response.getBody()).contains("valkey");
+  }
+
+  @Test
+  void notReadyWhenValkeyDown() {
+    databaseUp();
+    when(valkey.getConnectionFactory()).thenReturn(factory);
+    when(factory.getConnection()).thenThrow(new DataAccessResourceFailureException("down"));
+
+    var response = controller.readyz();
+    assertThat(response.getStatusCode().value()).isEqualTo(503);
+    assertThat(response.getBody()).contains("valkey");
+  }
+
+  private void databaseUp() {
+    when(jdbc.queryForObject("SELECT 1", Integer.class)).thenReturn(1);
+  }
 }
