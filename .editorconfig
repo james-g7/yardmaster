@@ -1,0 +1,27 @@
+# Editor settings for Yardmaster. Most editors read this file automatically;
+# IntelliJ and VS Code (with the EditorConfig extension) apply it on open.
+# https://editorconfig.org
+#
+# Java follows Google Java Style, which Checkstyle enforces in `mvn verify`.
+# Line endings are left to Git (core.autocrlf), so they aren't set here.
+
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Google Java Style: 2-space indent, 4-space continuation, 100-column lines
+[*.java]
+max_line_length = 100
+ij_continuation_indent_size = 4
+
+[*.sql]
+indent_size = 4
+
+# Two trailing spaces are a line break in Markdown
+[*.md]
+trim_trailing_whitespace = false
