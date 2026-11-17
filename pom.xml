@@ -27,7 +27,10 @@
 
   <properties>
     <java.version>21</java.version>
+    <checkstyle.version>10.26.1</checkstyle.version>
     <sqlite-jdbc.version>3.54.1.0</sqlite-jdbc.version>
+    <pitest.version>1.30.2</pitest.version>
+    <pitest-junit5.version>1.2.3</pitest-junit5.version>
   </properties>
 
   <dependencies>
@@ -144,6 +147,37 @@
         </configuration>
       </plugin>
       <plugin>
+        <!-- Google Java Style, checked before anything compiles -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <configLocation>google_checks.xml</configLocation>
+          <suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>
+          <consoleOutput>true</consoleOutput>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+          <!-- google_checks.xml reports at warning level; fail the build on those too -->
+          <violationSeverity>warning</violationSeverity>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${checkstyle.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>google-style</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <!-- *IT classes (Testcontainers) run in the integration-test phase -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
@@ -161,4 +195,68 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!--
+      Mutation testing with PIT. Not part of `mvn verify`; CI runs it on pull requests into main.
+      Run locally: mvn -Ppitest test-compile org.pitest:pitest-maven:mutationCoverage
+      (test-compile also runs dependency:properties, which sets the Mockito agent path below.)
+    -->
+    <profile>
+      <id>pitest</id>
+      <dependencies>
+        <!-- pitest-junit5-plugin needs the JUnit launcher on the test classpath -->
+        <dependency>
+          <groupId>org.junit.platform</groupId>
+          <artifactId>junit-platform-launcher</artifactId>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-maven</artifactId>
+            <version>${pitest.version}</version>
+            <dependencies>
+              <dependency>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-junit5-plugin</artifactId>
+                <version>${pitest-junit5.version}</version>
+              </dependency>
+            </dependencies>
+            <configuration>
+              <targetClasses>
+                <param>yardmaster.*</param>
+              </targetClasses>
+              <!-- Unit tests only: *IT classes start Testcontainers and would run once per mutant -->
+              <targetTests>
+                <param>yardmaster.*Test</param>
+              </targetTests>
+              <excludedTestClasses>
+                <param>yardmaster.*IT</param>
+              </excludedTestClasses>
+              <excludedClasses>
+                <param>yardmaster.YardmasterApplication</param>
+              </excludedClasses>
+              <!-- Same flags as surefire's argLine -->
+              <jvmArgs>
+                <jvmArg>-javaagent:${org.mockito:mockito-core:jar}</jvmArg>
+                <jvmArg>-Xshare:off</jvmArg>
+                <jvmArg>--enable-native-access=ALL-UNNAMED</jvmArg>
+              </jvmArgs>
+              <!-- Every mutant must be killed -->
+              <mutationThreshold>100</mutationThreshold>
+              <threads>4</threads>
+              <timestampedReports>false</timestampedReports>
+              <outputFormats>
+                <param>HTML</param>
+                <param>XML</param>
+              </outputFormats>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
