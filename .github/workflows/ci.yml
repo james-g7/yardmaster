@@ -67,6 +67,7 @@ jobs:
         run: docker build -t yardmaster:ci .
       - name: Start with Compose and check readiness
         run: |
+          export YARDMASTER_MASTER_KEY="$(openssl rand -base64 32)"
           docker compose -f deploy/docker-compose.yml up -d
           for i in $(seq 1 30); do
             if curl -fs localhost:8080/readyz; then echo; exit 0; fi

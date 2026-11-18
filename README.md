@@ -55,7 +55,12 @@ never stored.
 
 ## Quick start
 
-You need Docker with Compose.
+You need Docker with Compose. First create a master key, which encrypts provider
+keys at rest. Keep it somewhere safe: stored keys can't be read without it.
+
+```bash
+export YARDMASTER_MASTER_KEY="$(openssl rand -base64 32)"
+```
 
 ```bash
 docker compose -f deploy/docker-compose.yml up --build
@@ -201,6 +206,7 @@ Everything is set through environment variables.
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `YARDMASTER_MASTER_KEY` | none, required | 32 random bytes in base64 (`openssl rand -base64 32`). Encrypts provider keys. Startup stops if it is missing or invalid. |
 | `YARDMASTER_PUBLIC_PORT` | `8080` | Caller API and health checks |
 | `YARDMASTER_ADMIN_PORT` | `9090` | Admin panel, admin API and metrics. Never expose publicly. |
 | `YARDMASTER_DATA_DIR` | `./data` | Directory for the SQLite file (`/data` in the container) |
@@ -214,9 +220,8 @@ Everything is set through environment variables.
 | `POSTGRES_USER` | `yardmaster` | Database user |
 | `POSTGRES_PASSWORD` | none | Database password |
 
-The master key that encrypts provider keys arrives in build step 2 and will be
-supplied the same way, through the environment or a mounted secret, and never
-stored in the database.
+The master key is supplied through the environment or a mounted secret and is
+never stored in the database, logged or shown in error messages.
 
 Two ports, two audiences:
 
@@ -291,6 +296,10 @@ To run from source, start a Valkey first:
 
 ```bash
 docker run --rm -d --name valkey -p 6379:6379 valkey/valkey:8-alpine
+```
+
+```bash
+export YARDMASTER_MASTER_KEY="$(openssl rand -base64 32)"
 ```
 
 ```bash
