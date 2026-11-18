@@ -207,6 +207,7 @@ Everything is set through environment variables.
 | Variable | Default | Purpose |
 |---|---|---|
 | `YARDMASTER_MASTER_KEY` | none, required | 32 random bytes in base64 (`openssl rand -base64 32`). Encrypts provider keys. Startup stops if it is missing or invalid. |
+| `YARDMASTER_PROVIDER_KEY_OPENAI` | none | Optional OpenAI key, stored encrypted at startup as the `openai-env` key. Changing it and restarting replaces the stored key. Never logged. |
 | `YARDMASTER_PUBLIC_PORT` | `8080` | Caller API and health checks |
 | `YARDMASTER_ADMIN_PORT` | `9090` | Admin panel, admin API and metrics. Never expose publicly. |
 | `YARDMASTER_DATA_DIR` | `./data` | Directory for the SQLite file (`/data` in the container) |
