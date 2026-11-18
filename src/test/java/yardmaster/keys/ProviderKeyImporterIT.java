@@ -3,7 +3,6 @@ package yardmaster.keys;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -52,18 +51,27 @@ class ProviderKeyImporterIT {
     }
   }
 
+  /**
+   * Passes settings as command-line arguments: they override application.yml, so the app really
+   * uses the temp database, random ports and the Valkey container.
+   */
   private ConfigurableApplicationContext start(String providerKey) {
-    return new SpringApplicationBuilder(YardmasterApplication.class)
-        .properties(
-            Map.of(
-                "spring.datasource.url", "jdbc:sqlite:" + dataDir.resolve("yardmaster.db"),
-                "spring.data.redis.host", valkey.getHost(),
-                "spring.data.redis.port", String.valueOf(valkey.getMappedPort(6379)),
-                "server.port", "0",
-                "management.server.port", "0",
-                MasterKey.ENV_VAR, TestKeys.MASTER_KEY,
-                ProviderKeyImporter.ENV_VAR, providerKey))
-        .run();
+    var app =
+        new SpringApplicationBuilder(YardmasterApplication.class)
+            .run(
+                "--spring.datasource.url=jdbc:sqlite:" + database(),
+                "--spring.data.redis.host=" + valkey.getHost(),
+                "--spring.data.redis.port=" + valkey.getMappedPort(6379),
+                "--server.port=0",
+                "--management.server.port=0",
+                "--" + MasterKey.ENV_VAR + "=" + TestKeys.MASTER_KEY,
+                "--" + ProviderKeyImporter.ENV_VAR + "=" + providerKey);
+    assertThat(database()).exists();
+    return app;
+  }
+
+  private Path database() {
+    return dataDir.resolve("yardmaster.db");
   }
 
   private static String storedKey(JdbcTemplate jdbc) {
