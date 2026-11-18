@@ -20,7 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 /** Default setup: SQLite file plus a real Valkey. */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = "management.server.port=0")
+    properties = {"management.server.port=0", "YARDMASTER_MASTER_KEY=" + TestKeys.MASTER_KEY})
 @Testcontainers
 @DirtiesContext // close the app so Windows can delete the SQLite temp file
 class SqliteStartupIT {

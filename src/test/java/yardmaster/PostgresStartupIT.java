@@ -19,7 +19,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 /** Several-replica setup: PostgreSQL plus a real Valkey. The same migrations must apply. */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = "management.server.port=0")
+    properties = {"management.server.port=0", "YARDMASTER_MASTER_KEY=" + TestKeys.MASTER_KEY})
 @ActiveProfiles("postgres")
 @Testcontainers
 class PostgresStartupIT {
