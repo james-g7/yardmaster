@@ -21,12 +21,14 @@ import org.junit.jupiter.api.Test;
 /** Calls the fake server directly. No real provider is involved. */
 class FakeOpenAiTest {
 
+  private static final String KEY = "sk-fake-test";
+
   private FakeOpenAi fake;
   private final HttpClient client = HttpClient.newHttpClient();
 
   @BeforeEach
   void start() {
-    fake = new FakeOpenAi();
+    fake = new FakeOpenAi(KEY);
   }
 
   @AfterEach
@@ -35,8 +37,13 @@ class FakeOpenAiTest {
   }
 
   private HttpResponse<java.io.InputStream> post() throws Exception {
+    return post("Bearer " + KEY);
+  }
+
+  private HttpResponse<java.io.InputStream> post(String authorization) throws Exception {
     HttpRequest req =
         HttpRequest.newBuilder(URI.create(fake.baseUrl() + "/v1/chat/completions"))
+            .header("Authorization", authorization)
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString("{\"model\":\"x\",\"stream\":true}"))
             .build();
@@ -118,6 +125,14 @@ class FakeOpenAiTest {
     assertThat(data).isNotEmpty().hasSizeLessThan(FakeOpenAi.CONTENT_PARTS.size() + 1);
     assertThat(data).doesNotContain("[DONE]");
     assertThat(data).noneMatch(d -> d.contains("\"usage\""));
+  }
+
+  @Test
+  void rejectsWrongKey() throws Exception {
+    HttpResponse<java.io.InputStream> res = post("Bearer sk-wrong");
+
+    assertThat(res.statusCode()).isEqualTo(401);
+    assertThat(readDataLines(res)).isEmpty();
   }
 
   @Test

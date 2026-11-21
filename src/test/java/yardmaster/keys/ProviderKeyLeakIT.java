@@ -50,7 +50,7 @@ class ProviderKeyLeakIT {
       new GenericContainer<>("valkey/valkey:8-alpine").withExposedPorts(6379);
 
   private final ListAppender<ILoggingEvent> logs = new ListAppender<>();
-  private final FakeOpenAi openAi = new FakeOpenAi();
+  private final FakeOpenAi openAi = new FakeOpenAi(FAKE_KEY);
   private ConfigurableApplicationContext app;
 
   @AfterEach

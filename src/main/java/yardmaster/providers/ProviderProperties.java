@@ -8,5 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record ProviderProperties(OpenAi openai) {
 
   /** OpenAI endpoint and timeouts. */
-  public record OpenAi(String baseUrl, Duration connectTimeout, Duration readTimeout) {}
+  public record OpenAi(String baseUrl, Duration connectTimeout, Duration readTimeout) {
+    public static final String TYPE = "openai";
+  }
 }
