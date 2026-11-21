@@ -41,7 +41,8 @@ public class OpenAiClient {
   }
 
   /**
-   * Retrieves the OpenAI API key from the database and decrypts it.
+   * Retrieves the OpenAI API key from the database and decrypts it. If several keys are enabled,
+   * the oldest one is used, so the choice is the same on every call and on SQLite and PostgreSQL.
    *
    * @return the decrypted OpenAI API key.
    * @throws IllegalStateException if no API key is found.
@@ -52,7 +53,8 @@ public class OpenAiClient {
   private String apiKey() {
     List<String> encryptedKey = jdbc.query("SELECT encrypted_key FROM provider_keys "
             + "JOIN providers ON providers.id = provider_keys.provider_id "
-            + "WHERE providers.type = ? AND provider_keys.enabled = true",
+            + "WHERE providers.type = ? AND provider_keys.enabled = true "
+            + "ORDER BY provider_keys.created_at, provider_keys.id",
             (rs, i) -> rs.getString("encrypted_key"),
              ProviderProperties.OpenAi.TYPE
     );

@@ -34,6 +34,9 @@ public class OpenAiClientTest {
   private OpenAiClient client;
   private JdbcTemplate jdbc;
   private KeyCipher cipher;
+  private String apiKey;
+  private String providerId;
+  private Timestamp now;
 
   @BeforeEach
   void setup() {
@@ -48,10 +51,10 @@ public class OpenAiClientTest {
     jdbc = new JdbcTemplate(dataSource);
     cipher = new KeyCipher(MasterKey.from(Map.of(MasterKey.ENV_VAR, TestKeys.MASTER_KEY)));
     // Random per test, so the client can only send it by reading it from the database.
-    String apiKey = "sk-test-" + UUID.randomUUID();
+    apiKey = "sk-test-" + UUID.randomUUID();
     fake = new FakeOpenAi(apiKey);
-    Timestamp now = Timestamp.from(Instant.now());
-    String providerId = UUID.randomUUID().toString();
+    now = Timestamp.from(Instant.now());
+    providerId = UUID.randomUUID().toString();
 
     jdbc.update(
         "INSERT INTO providers (id, owner_id, type, base_url, created_at, updated_at)"
@@ -107,10 +110,48 @@ public class OpenAiClientTest {
   @Test
   void wrongKeyIsRejected() {
     jdbc.update("UPDATE provider_keys SET encrypted_key = ?", cipher.encrypt("sk-wrong"));
+    byte[] body = "test".getBytes(UTF_8);
 
-    assertThatThrownBy(() -> client.complete("test".getBytes(UTF_8)))
+    assertThatThrownBy(() -> client.stream(body))
         .isInstanceOfSatisfying(
             ProviderException.class, e -> assertThat(e.statusCode()).isEqualTo(401));
+    assertThatThrownBy(() -> client.complete(body))
+        .isInstanceOfSatisfying(
+            ProviderException.class, e -> assertThat(e.statusCode()).isEqualTo(401));
+  }
+
+  @Test
+  void missingKeyFailsBeforeAnyRequest() {
+    jdbc.update("DELETE FROM provider_keys");
+
+    assertThatThrownBy(() -> client.complete("test".getBytes(UTF_8)))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(fake.requestCount()).isZero();
+  }
+
+  @Test
+  void disabledKeyIsNotUsed() {
+    jdbc.update("UPDATE provider_keys SET enabled = ?", false);
+
+    assertThatThrownBy(() -> client.complete("test".getBytes(UTF_8)))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(fake.requestCount()).isZero();
+  }
+
+  @Test
+  void usesTheOldestEnabledKey() {
+    // The row from setup now holds a wrong key. A row added later, but dated earlier, holds the
+    // right one. Without ORDER BY, SQLite returns the setup row first and the call gets a 401.
+    jdbc.update("UPDATE provider_keys SET encrypted_key = ?", cipher.encrypt("sk-wrong"));
+    Timestamp earlier = Timestamp.from(now.toInstant().minus(Duration.ofHours(1)));
+    jdbc.update(
+        "INSERT INTO provider_keys (id, owner_id, provider_id, encrypted_key, display_name,"
+            + " enabled, abilities, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        UUID.randomUUID().toString(), "test", providerId, cipher.encrypt(apiKey),
+        "older-key", true, "{}", earlier, earlier);
+    fake.setMode(FakeOpenAi.Mode.OK_JSON);
+
+    assertThat(client.complete("test".getBytes(UTF_8))).contains("\"chat.completion\"");
   }
 
   @Test
