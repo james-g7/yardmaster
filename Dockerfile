@@ -9,7 +9,10 @@ RUN mvn -B -q -DskipTests -Dcheckstyle.skip package
 
 # Run
 FROM eclipse-temurin:21-jre
-RUN useradd --system --uid 10001 yardmaster \
+# Ubuntu 26.04 ships Pebble, a service manager this image never runs (java is PID 1).
+# Removing it drops a Go binary that otherwise brings its own CVEs into the image scan.
+RUN rm -f /usr/bin/pebble \
+ && useradd --system --uid 10001 yardmaster \
  && mkdir -p /data && chown yardmaster /data
 WORKDIR /app
 COPY --from=build /src/target/yardmaster-*.jar /app/yardmaster.jar

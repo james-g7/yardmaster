@@ -28,8 +28,7 @@ class ProviderKeyImporter implements ApplicationRunner {
 
   /** Rows made from the environment have no admin behind them; admins arrive in build step 9. */
   static final String OWNER = "system";
-
-  private static final String TYPE = "openai";
+  private static final String TYPE = ProviderProperties.OpenAi.TYPE;
   private static final Logger log = LoggerFactory.getLogger(ProviderKeyImporter.class);
 
   /** What a run did to the stored key. */
